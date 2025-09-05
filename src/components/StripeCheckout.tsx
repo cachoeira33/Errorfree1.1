@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { CreditCard, Lock, Loader } from 'lucide-react';
+import { CreditCard, Lock, Loader, ExternalLink } from 'lucide-react';
 import { StripeProduct } from '../stripe-config';
+import { useAuth } from './Auth/AuthProvider';
 
 interface StripeCheckoutProps {
   product: StripeProduct;
@@ -10,30 +11,60 @@ interface StripeCheckoutProps {
 
 const StripeCheckout: React.FC<StripeCheckoutProps> = ({ product, onSuccess, onError }) => {
   const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
 
   const handleCheckout = async () => {
+    if (!user) {
+      onError?.('Please sign in to continue with checkout');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // For demo purposes, simulate a successful checkout
-      // In production, this would integrate with your Stripe backend
-      
-      console.log('Processing checkout for:', product.name);
-      
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Simulate successful checkout
-      alert(`Thank you for your interest in ${product.name}! 
-      
-Please contact us to complete your purchase:
-📞 Phone: 07745432478
-📧 Email: support@errorfree247.co.uk
-💬 WhatsApp: 07745432478
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-We'll process your ${product.mode === 'subscription' ? 'subscription' : 'payment'} and get you set up immediately.`);
+      if (!supabaseUrl || !supabaseAnonKey) {
+        throw new Error('Supabase configuration missing');
+      }
+
+      // Get the user's session token
+      const { data: { session } } = await import('../lib/supabase').then(({ supabase }) => 
+        supabase.auth.getSession()
+      );
+
+      if (!session) {
+        throw new Error('No active session found');
+      }
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/stripe-checkout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          price_id: product.priceId,
+          mode: product.mode,
+          success_url: `${window.location.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: window.location.href,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create checkout session');
+      }
+
+      const { url } = await response.json();
       
-      onSuccess?.();
+      if (url) {
+        // Redirect to Stripe Checkout
+        window.location.href = url;
+      } else {
+        throw new Error('No checkout URL received');
+      }
     } catch (error: any) {
       console.error('Checkout error:', error);
       onError?.(error.message || 'An error occurred during checkout');

@@ -112,20 +112,20 @@ const BookingWidget: React.FC<BookingWidgetProps> = ({ isOpen, onClose, onBookin
   const handlePaymentSuccess = (paymentIntentId: string) => {
     const bookingReference = `EF${Date.now().toString().slice(-6)}`;
     
-    // For demo purposes, simulate successful booking
-    console.log('Booking confirmed:', {
-      reference: bookingReference,
-      data: formData,
-      amount: calculateAmount()
+    // Send booking confirmation
+    import('../api/booking').then(({ sendBookingConfirmation }) => {
+      sendBookingConfirmation(formData, bookingReference, calculateAmount())
+        .then((result) => {
+          if (result.success) {
+            console.log('Booking confirmation sent successfully');
+          } else {
+            console.warn('Booking confirmation failed to send:', result.message);
+          }
+        })
+        .catch((error) => {
+          console.error('Error sending booking confirmation:', error);
+        });
     });
-    
-    // Show success message
-    alert(`Booking confirmed! Reference: ${bookingReference}
-    
-We'll contact you within 15 minutes at ${formData.phone} to confirm your appointment.
-
-Emergency contact: 07745432478
-Email: support@errorfree247.co.uk`);
     
     const confirmationData = {
       bookingReference,

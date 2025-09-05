@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   PaymentElement,
   useStripe,
   useElements
 } from '@stripe/react-stripe-js';
-import { CreditCard, Lock, Shield } from 'lucide-react';
+import { CreditCard, Lock, Shield, AlertCircle } from 'lucide-react';
+import { createPaymentIntent } from '../api/stripe';
 
 interface PaymentFormProps {
   amount: number;
-  onSuccess: () => void;
+  onSuccess: (paymentIntentId: string) => void;
   onError: (error: string) => void;
   bookingData: any;
 }
@@ -18,11 +19,24 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ amount, onSuccess, onError, b
   const elements = useElements();
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<string>('');
+  const [clientSecret, setClientSecret] = useState<string>('');
+
+  useEffect(() => {
+    // Create PaymentIntent as soon as the component loads
+    createPaymentIntent(amount, 'gbp', bookingData)
+      .then((data) => {
+        setClientSecret(data.client_secret);
+      })
+      .catch((error) => {
+        console.error('Error creating payment intent:', error);
+        onError('Failed to initialize payment. Please try again.');
+      });
+  }, [amount, bookingData]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!stripe || !elements) {
+    if (!stripe || !elements || !clientSecret) {
       return;
     }
 
@@ -30,20 +44,42 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ amount, onSuccess, onError, b
     setMessage('');
 
     try {
-      // For demo purposes, simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Simulate successful payment
-      const mockPaymentIntentId = `pi_demo_${Date.now()}`;
-      setMessage('Payment processed successfully!');
-      onSuccess(mockPaymentIntentId);
-    } catch (err) {
+      const { error, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: `${window.location.origin}/success`,
+        },
+        redirect: 'if_required'
+      });
+
+      if (error) {
+        if (error.type === 'card_error' || error.type === 'validation_error') {
+          setMessage(error.message || 'Payment failed');
+          onError(error.message || 'Payment failed');
+        } else {
+          setMessage('An unexpected error occurred.');
+          onError('An unexpected error occurred.');
+        }
+      } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+        setMessage('Payment succeeded!');
+        onSuccess(paymentIntent.id);
+      }
+    } catch (err: any) {
       setMessage('Network error. Please try again.');
       onError('Network error occurred');
     }
 
     setIsLoading(false);
   };
+
+  if (!clientSecret) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <span className="ml-3 text-gray-600">Initializing payment...</span>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -64,14 +100,36 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ amount, onSuccess, onError, b
         </h4>
         <PaymentElement 
           options={{
-            layout: 'tabs'
+            layout: 'tabs',
+            fields: {
+              billingDetails: {
+                name: 'auto',
+                email: 'auto',
+                phone: 'auto',
+                address: {
+                  country: 'auto',
+                  postalCode: 'auto'
+                }
+              }
+            }
           }}
         />
       </div>
 
       {message && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-800 text-sm">{message}</p>
+        <div className={`rounded-lg p-4 flex items-center space-x-2 ${
+          message.includes('succeeded') 
+            ? 'bg-green-50 border border-green-200' 
+            : 'bg-red-50 border border-red-200'
+        }`}>
+          <AlertCircle className={`w-5 h-5 ${
+            message.includes('succeeded') ? 'text-green-600' : 'text-red-600'
+          }`} />
+          <p className={`text-sm ${
+            message.includes('succeeded') ? 'text-green-800' : 'text-red-800'
+          }`}>
+            {message}
+          </p>
         </div>
       )}
 
