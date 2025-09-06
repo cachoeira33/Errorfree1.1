@@ -24,7 +24,7 @@ export const stripeProducts: StripeProduct[] = [
   },
   {
     id: 'prod_SxqZfdCcbFqMap',
-    priceId: 'price_1S1usZF1zvZ6g9yuYRRp9KaX',
+    priceId: 'price_1S4UqsFU2ZIsvaKQVvGHXDtY',
     name: 'Remote Support (per 30 min)',
     description: 'Professional remote IT support session. Quick fixes, optimization, and troubleshooting from our experts.',
     price: 30.00,
@@ -69,7 +69,7 @@ export const stripeProducts: StripeProduct[] = [
   // Hardware Upgrades
   {
     id: 'prod_SxqZO3JUUj312G',
-    priceId: 'price_1S1usaF1zvZ6g9yuBRoehVnA',
+    priceId: 'price_1S4UnTFU2ZIsvaKQ0zwNLegu',
     name: 'SSD Upgrade (1TB)',
     description: 'Premium 1TB SSD upgrade. Includes installation, system migration, and performance testing for maximum speed.',
     price: 199.00,

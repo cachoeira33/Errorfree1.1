@@ -23,6 +23,8 @@ import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import CookiesPolicyPage from './pages/CookiesPolicyPage';
 import ComplaintsPage from './pages/ComplaintsPage';
 import SecurityPage from './pages/SecurityPage';
+import BookingSuccessPage from './pages/BookingSuccessPage';
+import BookingCancelledPage from './pages/BookingCancelledPage';
 import CustomSetupsPage from './pages/CustomSetupsPage';
 import SuccessPage from './components/SuccessPage';
 
@@ -110,6 +112,8 @@ function App() {
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/signup" element={<SignupPage />} />
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/booking-success" element={<BookingSuccessPage />} />
+                <Route path="/booking-cancelled" element={<BookingCancelledPage />} />
                 <Route path="/success" element={<SuccessPage />} />
               </Routes>
             </main>
